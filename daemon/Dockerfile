@@ -27,10 +27,9 @@ RUN make daemon
 # build final image #
 #####################
 FROM final
-RUN mkdir /app
-WORKDIR /app
+WORKDIR /
 
-COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon /monitoring-daemon
+COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon/daemon /monitoring-daemon
 
 EXPOSE 8080
 
