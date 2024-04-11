@@ -20,7 +20,7 @@ ENTRYPOINT ["go", "run", "main.go"]
 FROM server-base as server-build
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
 COPY . /go/src/github.com/rclsilver/monitoring/daemon
-RUN make daemon
+RUN make daemon && ls -l
 
 
 #####################
