@@ -30,8 +30,8 @@ FROM final
 RUN mkdir /app
 WORKDIR /app
 
-COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon /app/monitoring
+COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon /monitoring-daemon
 
 EXPOSE 8080
 
-ENTRYPOINT [ "/app/monitoring" ]
+ENTRYPOINT [ "/monitoring-daemon" ]
