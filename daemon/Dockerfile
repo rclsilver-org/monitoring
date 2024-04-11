@@ -10,7 +10,7 @@ FROM alpine:3.15.4 as final
 ############################
 FROM server-base as server-devel
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
-COPY . /go/src/github.com/rclsilver/monitoring/daemon
+COPY daemon /go/src/github.com/rclsilver/monitoring/daemon
 ENTRYPOINT ["go", "run", "main.go"]
 
 
@@ -19,7 +19,7 @@ ENTRYPOINT ["go", "run", "main.go"]
 ########################
 FROM server-base as server-build
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
-COPY . /go/src/github.com/rclsilver/monitoring/daemon
+COPY daemon /go/src/github.com/rclsilver/monitoring/daemon
 RUN make daemon && ls -l
 
 
