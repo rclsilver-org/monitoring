@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,21 +46,13 @@ func withLogging(next http.Handler) http.Handler {
 
 		elapsed := time.Since(start)
 
-		remote_address := strings.Split(r.RemoteAddr, ":")
-		real_address := remote_address[0]
-		forwarded_for, ok := r.Header["X-Forwarded-For"]
-		if ok {
-			real_address = forwarded_for[0]
-		}
-
 		logrus.WithContext(r.Context()).WithFields(logrus.Fields{
 			"duration":       elapsed,
 			"status_code":    recorder.Status,
 			"request_id":     id.String(),
 			"method":         r.Method,
 			"uri":            r.RequestURI,
-			"remote_address": real_address,
-			"remote_port":    remote_address[1],
+			"remote_address": getRemoteAddress(r),
 		}).Infof("%s %s", r.Method, r.RequestURI)
 	})
 }

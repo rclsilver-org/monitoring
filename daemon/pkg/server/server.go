@@ -88,7 +88,7 @@ func (s *Server) RegisterGroup(path, name, description string) *fizz.RouterGroup
 
 func (s *Server) Serve(ctx context.Context) error {
 	endpoint := fmt.Sprintf("%s:%d", s.cfg.ListenHost, s.cfg.ListenPort)
-	srv := &http.Server{Addr: endpoint, Handler: withLogging(s.router)}
+	srv := &http.Server{Addr: endpoint, Handler: s.checkAllowedSources(withLogging(s.router))}
 
 	go func() {
 		logrus.WithContext(ctx).Debugf("starting the HTTP server on %s", endpoint)
@@ -107,4 +107,28 @@ func (s *Server) Serve(ctx context.Context) error {
 	}
 
 	return srv.Shutdown(context.Background())
+}
+
+func (s *Server) checkAllowedSources(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		remote_address := getRemoteAddress(r)
+
+		if len(s.cfg.AllowedSources) > 0 {
+			allowed := false
+
+			for _, ip := range s.cfg.AllowedSources {
+				if ip == remote_address {
+					allowed = true
+					break
+				}
+			}
+
+			if !allowed {
+				http.Error(w, "not allowed", http.StatusForbidden)
+				return
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
