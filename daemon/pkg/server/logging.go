@@ -47,9 +47,11 @@ func withLogging(next http.Handler) http.Handler {
 
 		elapsed := time.Since(start)
 
-		remote_address, ok := r.Header["X-Forwarded-For"]
-		if !ok {
-			remote_address = strings.Split(r.RemoteAddr, ":")
+		remote_address := strings.Split(r.RemoteAddr, ":")
+		real_address := remote_address[0]
+		forwarded_for, ok := r.Header["X-Forwarded-For"]
+		if ok {
+			real_address = forwarded_for[0]
 		}
 
 		logrus.WithContext(r.Context()).WithFields(logrus.Fields{
@@ -58,7 +60,7 @@ func withLogging(next http.Handler) http.Handler {
 			"request_id":     id.String(),
 			"method":         r.Method,
 			"uri":            r.RequestURI,
-			"remote_address": remote_address[0],
+			"remote_address": real_address,
 			"remote_port":    remote_address[1],
 		}).Infof("%s %s", r.Method, r.RequestURI)
 	})
