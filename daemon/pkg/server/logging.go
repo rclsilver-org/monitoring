@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -45,10 +44,13 @@ func withLogging(next http.Handler) http.Handler {
 		}
 
 		next.ServeHTTP(recorder, r)
-		spew.Dump(r.Header)
 
 		elapsed := time.Since(start)
-		remote_address := strings.Split(r.RemoteAddr, ":")
+
+		remote_address, ok := r.Header["X-Forwarded-For"]
+		if !ok {
+			remote_address = strings.Split(r.RemoteAddr, ":")
+		}
 
 		logrus.WithContext(r.Context()).WithFields(logrus.Fields{
 			"duration":       elapsed,
