@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -89,9 +90,14 @@ func (c *MQTTComponent) disconnect() {
 func (c *MQTTComponent) Run(ctx context.Context) error {
 	logrus.WithContext(ctx).Debug("starting the MQTT component")
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		return fmt.Errorf("unable to get current hostname: %w", err)
+	}
+
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tcp://%s:%d", c.cfg.Host, c.cfg.Port))
-	opts.SetClientID("monitoring-mqtt")
+	opts.SetClientID(fmt.Sprintf("mqtt-monitoring-%s", hostname))
 	//opts.SetUsername("emqx")
 	//opts.SetPassword("public")
 
