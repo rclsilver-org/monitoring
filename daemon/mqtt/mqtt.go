@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/loopfz/gadgeto/tonic"
 	"github.com/sirupsen/logrus"
@@ -154,8 +153,8 @@ func (c *MQTTComponent) messagePubHandler(client mqtt.Client, msg mqtt.Message) 
 		c.topics[msg.Topic()].Timestamp = time.Now()
 	}
 
-	c.topics[msg.Topic()].Payload = msg.Payload()
-	spew.Dump(c.topics[msg.Topic()].Payload)
+	c.topics[msg.Topic()].Payload = make([]byte, 0, len(msg.Payload()))
+	c.topics[msg.Topic()].Payload = append(c.topics[msg.Topic()].Payload, msg.Payload()...)
 }
 
 func (c *MQTTComponent) connectHandler(client mqtt.Client) {
