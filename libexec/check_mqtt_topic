@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: $(basename ${0}) -U <url> -t <topic> -w <warning> -c <critical>[ -N [-m <min-value>] [-M <max-value>]]"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while getopts ":U:t:w:c:Nm:M:" opt; do
+    case ${opt} in
+        U)
+            url=$OPTARG
+            ;;
+        t)
+            topic=$OPTARG
+            ;;
+        w)
+            warning=$OPTARG
+            ;;
+        c)
+            critical=$OPTARG
+            ;;
+        N)
+            numeric=1
+            ;;
+        m)
+            numeric_min=$OPTARG
+            ;;
+        M)
+            numeric_max=$OPTARG
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -z "${url}" ]; then
+    echo "missing url"
+    usage
+fi
+
+if [ -z "${topic}" ]; then
+    echo "missing topic"
+    usage
+fi
+
+if [ -z "${warning}" ]; then
+    warning=$((5*60))
+fi
+
+if [ -z "${critical}" ]; then
+    critical=$((15*60))
+fi
+
+response=$(curl -sSf ${url}/mqtt/topics/$(echo "${topic}" | sed 's/\//%2F/g') 2>&1)
+ret=$?
+
+if [ $ret -ne 0 ]; then
+    echo "CRITICAL - cURL error (${response})"
+    exit 2
+fi
+
+timestamp=$(echo "${response}" | jq -r .timestamp)
+timestamp_secs=$(echo "${timestamp}" | xargs -I {} date -d "{}" +%s)
+
+timestamp_warning=$((timestamp_secs - warning))
+timestamp_critical=$((timestamp_secs - critical))
+
+timestamp_topic=$(echo "${response}" | jq -r .topic.timestamp)
+timestamp_topic_secs=$(echo "${timestamp_topic}" | xargs -I {} date -d "{}" +%s)
+
+elapsed_secs=$((timestamp_secs - timestamp_topic_secs))
+
+if [ $timestamp_topic_secs -lt $timestamp_critical ]; then
+    echo "CRITICAL - ${topic} is too old (${timestamp_topic}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+    exit 2
+elif [ $timestamp_topic_secs -lt $timestamp_warning ]; then
+    echo "WARNING - ${topic} is too old (${timestamp_topic}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+    exit 1
+else
+    if [ "${numeric}" == "1" ]; then
+        payload=$(echo "${response}" | jq -r .topic.payload | base64 -d)
+
+        if ! (echo "${payload}" | grep -qE '^[0-9]+(\.[0-9]+)?$'); then
+            echo "CRITICAL - value is not a numeric |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+            exit 2
+        fi
+
+        if [ ! -z $numeric_min ] && [ $(echo "${payload} < ${numeric_min}" | bc -l) == "1" ]; then
+            echo "CRITICAL - value is less than ${numeric_min} (${payload}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+            exit 2
+        fi
+
+        if [ ! -z $numeric_max ] && [ $(echo "${payload} > ${numeric_max}" | bc -l) == "1" ]; then
+            echo "CRITICAL - value is greater than ${numeric_max} (${payload}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+            exit 2
+        fi
+    fi
+
+    echo "OK - ${topic} is OK (${timestamp_topic}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+    exit 0
+fi

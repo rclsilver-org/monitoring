@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: $(basename ${0}) -U <url>"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while getopts ":U:" opt; do
+    case ${opt} in
+        U)
+            url=$OPTARG
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -z "${url}" ]; then
+    echo "missing url"
+    usage
+fi
+
+response=$(curl -sSf ${url}/mqtt/health 2>&1)
+ret=$?
+
+if [ $ret -ne 0 ]; then
+    echo "CRITICAL - cURL error (${response})"
+    exit 2
+fi
+
+status=$(echo "${response}" | jq -r '.status')
+
+if [ "${status}" != "OK" ]; then
+    echo "CRITICAL - MQTT status is KO ($(echo "${response}" | jq -r '.error'))"
+    exit 2
+fi
+
+echo "OK - MQTT status is OK"
+exit 0
