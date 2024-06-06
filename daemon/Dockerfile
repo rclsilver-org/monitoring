@@ -1,7 +1,7 @@
 ###############
 # base images #
 ###############
-FROM golang:1.22-bookworm as server-base
+FROM golang:1.21-bookworm as server-base
 FROM alpine:3.15.4 as final
 
 
@@ -9,7 +9,7 @@ FROM alpine:3.15.4 as final
 # server development stage #
 ############################
 FROM server-base as server-devel
-COPY . /go/src/github.com/rclsilver/monitoring
+COPY . /go/src/github.com/rclsilver/monitoring/daemon
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
 ENTRYPOINT ["go", "run", "main.go"]
 
@@ -18,9 +18,9 @@ ENTRYPOINT ["go", "run", "main.go"]
 # build Go application #
 ########################
 FROM server-base as server-build
-COPY . /go/src/github.com/rclsilver/monitoring
+COPY . /go/src/github.com/rclsilver/monitoring/daemon
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
-RUN make daemon && ls -l
+RUN make daemon
 
 
 #####################
