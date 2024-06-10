@@ -1,0 +1,5 @@
+Package: monitoring-daemon
+Version: 0.0.0
+Maintainer: rclsilver
+Architecture: mips
+Description: https://github.com/rclsilver-org/monitoring

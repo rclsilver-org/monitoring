@@ -13,14 +13,18 @@ jobs:
       DOCKER_FILE: daemon/Dockerfile
 
     permissions:
-      contents: read
+      contents: write
       packages: write
-      attestations: write
       id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.22
 
       - name: Login to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -40,6 +44,44 @@ jobs:
         run:
             echo "value=$(./daemon/generate-version.sh)" >> "$GITHUB_OUTPUT"
 
+      - name: Build the binaries
+        run: |
+            make -C daemon monitoring-daemon
+
+      - name: Prepare the packages
+        run: |
+            for arch in amd64 mips64; do
+                mkdir .debpkg-${arch}
+                cp -R daemon/DEBIAN .debpkg-${arch}
+                sed -ri 's/^Version: .+/Version: ${{ steps.version.outputs.value }}/' .debpkg-${arch}/DEBIAN/control
+                mkdir -p .debpkg-${arch}/usr/bin
+                cp daemon/dist/monitoring-daemon-linux-${arch} .debpkg-${arch}/usr/bin/monitoring-daemon
+            done
+
+      - name: Build the package
+        id: build_deb_amd64
+        uses: jiro4989/build-deb-action@v3
+        with:
+          package: monitoring-daemon
+          package_root: .debpkg-amd64
+          maintainer: Thomas Bétrancourt <thomas@betrancourt.net>
+          version: ${{ steps.version.outputs.value }}
+          arch: 'amd64'
+          desc: 'monitoring daemon'
+          homepage: 'https://github.com/rclsilver-org/monitoring'
+
+      - name: Build the package
+        id: build_deb_mips64
+        uses: jiro4989/build-deb-action@v3
+        with:
+          package: monitoring-daemon
+          package_root: .debpkg-mips64
+          maintainer: Thomas Bétrancourt <thomas@betrancourt.net>
+          version: ${{ steps.version.outputs.value }}
+          arch: 'mips'
+          desc: 'monitoring daemon'
+          homepage: 'https://github.com/rclsilver-org/monitoring'
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
@@ -49,3 +91,29 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.value }},${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Publish the release
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            daemon/dist/monitoring-daemon-linux-amd64
+            daemon/dist/monitoring-daemon-linux-mips64
+            ${{ steps.build_deb_amd64.outputs.file_name }}
+            ${{ steps.build_deb_mips64.outputs.file_name }}
+
+    #   - name: Publish the release
+    #     uses: actions/create-release@v1
+    #     id: create_release
+    #     with:
+    #       draft: true
+    #       prerelease: true
+    #       release_name: dev
+    #       tag_name: ${{ github.ref_name }}
+    #       body: ''
+    #       # body_path: CHANGELOG.md
+    #     env:
+    #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

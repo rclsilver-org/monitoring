@@ -1,4 +1,4 @@
-BINARY = daemon
+BINARY = monitoring-daemon
 SOURCE_FILES = ./main.go
 
 MAIN_PKG    = $(shell go list)
@@ -14,27 +14,26 @@ TEST_CMD       = go test -v -race -cover
 
 LD_FLAGS = -ldflags "-w -s -X ${VERSION_PKG}.commit=${LAST_COMMIT} -X ${VERSION_PKG}.version=${VERSION}"
 
-DOCKER_REPOSITORY ?= rclsilver
-DOCKER_IMAGE = monitoring-daemon
-DOCKER_TAG ?= latest
+all: compile
 
-all: $(BINARY)
+compile: $(BINARY)
 
-$(BINARY): $(DIST_DIR)/$(BINARY)-amd64 $(DIST_DIR)/$(BINARY)-mips64
+$(BINARY): $(BINARY)-linux-amd64 $(BINARY)-linux-mips64
 
-$(DIST_DIR)/$(BINARY)-amd64: $(SOURCE_FILES) go.mod
+$(BINARY)-linux-amd64: $(DIST_DIR)/$(BINARY)-linux-amd64
+
+$(BINARY)-linux-mips64: $(DIST_DIR)/$(BINARY)-linux-mips64
+
+$(DIST_DIR)/$(BINARY)-linux-amd64: $(SOURCE_FILES) go.mod
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(LD_FLAGS) -o $@ $(SOURCE_FILES)
 
-$(DIST_DIR)/$(BINARY)-mips64: $(SOURCE_FILES) go.mod
+$(DIST_DIR)/$(BINARY)-linux-mips64: $(SOURCE_FILES) go.mod
 	CGO_ENABLED=0 GOOS=linux GOARCH=mips64 go build $(LD_FLAGS) -o $@ $(SOURCE_FILES)
 
 .PHONY: test
 test:
 	docker-compose up -d postgresql-test
 	$(TEST_CMD) $(COVER_OPTS) $(TEST_LOCATION)
-
-docker:
-	docker build --no-cache -t $(DOCKER_REPOSITORY)/$(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 .PHONY: clean
 clean:

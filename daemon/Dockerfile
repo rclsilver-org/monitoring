@@ -21,7 +21,7 @@ FROM server-base as server-build
 COPY . /go/src/github.com/rclsilver/monitoring
 WORKDIR /go/src/github.com/rclsilver/monitoring/daemon
 RUN apk add --no-cache make && \
-    make dist/daemon-amd64
+    make monitoring-daemon-linux-amd64
 
 
 #####################
@@ -30,7 +30,7 @@ RUN apk add --no-cache make && \
 FROM final
 WORKDIR /
 
-COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon/dist/daemon-amd64 /monitoring-daemon
+COPY --from=server-build /go/src/github.com/rclsilver/monitoring/daemon/dist/monitoring-daemon-linux-amd64 /monitoring-daemon
 
 EXPOSE 8080
 
