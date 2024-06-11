@@ -3,7 +3,7 @@
 set -e
 
 # Default computed version
-COMPUTED_VERSION=$(git describe --tag 2>/dev/null || true)
+COMPUTED_VERSION=$(git describe --tag --match 'v*.*.*' 2>/dev/null || true)
 
 # Compute the version if the previous command has failed
 if [ -z "${COMPUTED_VERSION}" ]; then
