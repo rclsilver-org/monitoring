@@ -19,18 +19,10 @@ PIDFILE=/var/run/monitoring-${MODULE}.pid
 
 test -x $DAEMON || exit 5
 
-# if [ -r /etc/default/ntp ]; then
-#         . /etc/default/ntp
-# fi
-
-# if [ -e /var/lib/ntp/ntp.conf.dhcp ]; then
-#         NTPD_OPTS="$NTPD_OPTS -c /var/lib/ntp/ntp.conf.dhcp"
-# fi
-
 case $1 in
         start)
                 log_daemon_msg "Starting monitoring-${MODULE}" "monitoring-${MODULE}"
-                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON --background -- -p $PIDFILE ${MODULE}
+                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON --background -- -p $PIDFILE -c /etc/monitoring-daemon/${MODULE}.yaml ${MODULE}
                 status=$?
                 log_end_msg $status
                 ;;

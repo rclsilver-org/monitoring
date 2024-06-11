@@ -1,0 +1,13 @@
+# HTTP server settings
+- key: HTTP_LISTEN_HOST
+  value: 127.0.0.1
+
+- key: HTTP_LISTEN_PORT
+  value: 8080
+
+- key: HTTP_ALLOWED_SOURCES
+  value: 127.0.0.0/8
+
+# Public network interface
+- key: SPEEDTEST_INTERFACE
+  value: eth0

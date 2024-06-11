@@ -85,6 +85,7 @@ func (c *SpeedtestComponent) setError(err error) {
 
 func (c *SpeedtestComponent) Run(ctx context.Context) error {
 	logrus.WithContext(ctx).Debug("starting the speedtest component")
+	logrus.WithContext(ctx).Infof("using the %q network interface as public interface", c.cfg.Interface)
 
 	select {
 	case <-ctx.Done():

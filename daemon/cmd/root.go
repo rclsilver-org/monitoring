@@ -12,6 +12,9 @@ import (
 
 var (
 	verbose bool
+
+	configFile string
+
 	pidFile string
 	pidLock pid.ProcessLockFile
 )
@@ -32,7 +35,13 @@ var rootCmd = &cobra.Command{
 			pidLock = lock
 		}
 
-		configstore.InitFromEnvironment()
+		if configFile != "" {
+			logrus.Infof("loading the configuration from the file %q", configFile)
+			configstore.File(configFile)
+		} else {
+			logrus.Infof("loading the configuration according the %q environment variable", configstore.ConfigEnvVar)
+			configstore.InitFromEnvironment()
+		}
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		if pidLock != nil {
@@ -52,5 +61,6 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable to verbose mode")
+	rootCmd.PersistentFlags().StringVarP(&configFile, "config-file", "c", "", "Configuration file")
 	rootCmd.PersistentFlags().StringVarP(&pidFile, "pid-file", "p", "", "Write a pid file")
 }
