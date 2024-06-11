@@ -23,6 +23,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+          fetch-tags: true
+
+      - name: Debug version
+        run: |
+            git log
+            bash -x ./daemon/generate-version.sh
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -41,10 +49,6 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-
-      - name: Debug version
-        run:
-            bash -x ./daemon/generate-version.sh
 
       - name: Generate the version
         id: version
