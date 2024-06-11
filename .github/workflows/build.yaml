@@ -56,9 +56,10 @@ jobs:
 
       - name: Prepare the packages
         run: |
+            mkdir -p daemon/debian/usr/bin
+
             for arch in amd64 mips64; do
-                mkdir -p .debpkg-${arch}/usr/bin
-                cp -R daemon/DEBIAN .debpkg-${arch}
+                cp -R daemon/debian .debpkg-${arch}
                 cp daemon/dist/monitoring-daemon-linux-${arch} .debpkg-${arch}/usr/bin/monitoring-daemon
             done
 
