@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+    tags:
+      - '^v[0-9]+\.[0-9]+\.[0-9]+$'
+
 jobs:
   build-docker:
     runs-on: ubuntu-latest
@@ -51,10 +54,8 @@ jobs:
       - name: Prepare the packages
         run: |
             for arch in amd64 mips64; do
-                mkdir .debpkg-${arch}
-                cp -R daemon/DEBIAN .debpkg-${arch}
-                sed -ri 's/^Version: .+/Version: ${{ steps.version.outputs.value }}/' .debpkg-${arch}/DEBIAN/control
                 mkdir -p .debpkg-${arch}/usr/bin
+                cp -R daemon/DEBIAN .debpkg-${arch}
                 cp daemon/dist/monitoring-daemon-linux-${arch} .debpkg-${arch}/usr/bin/monitoring-daemon
             done
 
@@ -96,9 +97,9 @@ jobs:
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          title: "Development Build"
+          automatic_release_tag: ${{ startsWith(github.ref, 'refs/tags/v') && '' || 'latest' }}
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+          title: ${{ startsWith(github.ref, 'refs/tags/v') && steps.version.outputs.value || 'Development Build' }}
           files: |
             daemon/dist/monitoring-daemon-linux-amd64
             daemon/dist/monitoring-daemon-linux-mips64
