@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-monitoring
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: mqtt-monitoring
+  template:
+    metadata:
+      labels:
+        name: mqtt-monitoring
+    spec:
+      containers:
+      - env:
+        - name: CONFIGURATION_FROM
+          value: env:CONFIG
+        - name: CONFIG_HTTP_LISTEN_HOST
+          value: 0.0.0.0
+        - name: CONFIG_HTTP_ALLOWED_SOURCES
+          value: '10.42.0.1,192.168.4.42'
+        - name: CONFIG_MQTT_HOST
+          value: mosquitto.mosquitto
+        - name: CONFIG_MQTT_PORT
+          value: "1883"
+        image: rclsilver/monitoring-daemon:latest
+        imagePullPolicy: IfNotPresent
+        name: mqtt-monitoring
+        args:
+            - mqtt
+            - -v
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+          name: http
+
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /mon/ping
+            port: http
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /mon/ping
+            port: http
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-monitoring
+  namespace: monitoring
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    name: mqtt-monitoring
+  type: ClusterIP
+
+---
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: mqtt-monitoring
+  namespace: monitoring
+  annotations:
+    traefik.ingress.kubernetes.io/whitelist-source-range: 192.168.4.42/22
+spec:
+  entryPoints:
+    - websecure
+  routes:
+  - match: Host(`mqtt-monitoring.chatillon.betrancourt.net`)
+    kind: Rule
+    services:
+    - kind: Service
+      name: mqtt-monitoring
+      port: 80
+  tls:
+    certResolver: letsencrypt
