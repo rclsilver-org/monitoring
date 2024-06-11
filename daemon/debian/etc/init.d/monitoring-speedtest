@@ -30,7 +30,7 @@ test -x $DAEMON || exit 5
 case $1 in
         start)
                 log_daemon_msg "Starting monitoring-${MODULE}" "monitoring-${MODULE}"
-                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON -- -p $PIDFILE ${MODULE}
+                start-stop-daemon --start --quiet --oknodo --pidfile $PIDFILE --startas $DAEMON --background -- -p $PIDFILE ${MODULE}
                 status=$?
                 log_end_msg $status
                 ;;

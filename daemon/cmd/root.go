@@ -6,11 +6,14 @@ import (
 	"github.com/ovh/configstore"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/rclsilver/monitoring/daemon/pkg/pid"
 )
 
 var (
-	verbose    bool
-	configFile string
+	verbose bool
+	pidFile string
+	pidLock pid.ProcessLockFile
 )
 
 var rootCmd = &cobra.Command{
@@ -21,7 +24,22 @@ var rootCmd = &cobra.Command{
 			logrus.SetLevel(logrus.DebugLevel)
 		}
 
+		if pidFile != "" {
+			lock, err := pid.AcquireProcessIDLock(pidFile)
+			if err != nil {
+				logrus.WithError(err).Fatal("unable to write the pid file")
+			}
+			pidLock = lock
+		}
+
 		configstore.InitFromEnvironment()
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		if pidLock != nil {
+			if err := pidLock.Unlock(); err != nil {
+				logrus.WithError(err).Warning("unable to delete the pid file")
+			}
+		}
 	},
 }
 
@@ -34,4 +52,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable to verbose mode")
+	rootCmd.PersistentFlags().StringVarP(&pidFile, "pid-file", "p", "", "Write a pid file")
 }
