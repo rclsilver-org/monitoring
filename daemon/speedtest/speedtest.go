@@ -17,10 +17,18 @@ import (
 	"github.com/rclsilver-org/monitoring/daemon/pkg/server"
 )
 
+type Server struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Distance float64 `json:"distance"`
+}
+
 type Result struct {
 	Timestamp time.Time `json:"timestamp"`
 
 	Ping time.Duration `json:"ping,omitempty"`
+
+	Server Server `json:"server"`
 
 	Download       speedtest.ByteRate `json:"download,omitempty"`
 	DownloadString string             `json:"download-string,omitempty"`
@@ -172,6 +180,12 @@ func (c *SpeedtestComponent) execute(ctx context.Context) (*Result, error) {
 		Timestamp: time.Now(),
 		Ping:      targets[0].Latency,
 
+		Server: Server{
+			ID:       targets[0].ID,
+			Name:     targets[0].Name,
+			Distance: targets[0].Distance,
+		},
+
 		Download:       download,
 		DownloadString: download.String(),
 
@@ -245,20 +259,4 @@ func (c *SpeedtestComponent) executeUpload(ctx context.Context, f func() error) 
 type interfaceInfo struct {
 	DownloadedBytes int64
 	UploadedBytes   int64
-}
-
-type contextRoundTripper struct {
-	rt      http.RoundTripper
-	ctx     context.Context
-	timeout time.Duration
-}
-
-// RoundTrip executes a single HTTP transaction and injects the context into the request
-func (crt *contextRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	ctx, cancel := context.WithTimeout(crt.ctx, crt.timeout)
-	defer cancel()
-
-	req = req.WithContext(ctx)
-
-	return crt.rt.RoundTrip(req)
 }
