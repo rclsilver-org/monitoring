@@ -113,7 +113,7 @@ func (c *SpeedtestComponent) Run(ctx context.Context) error {
 			logrus.WithContext(ctx).WithError(err).Warningf("test has failed, retrying in %s", interval)
 		} else {
 			c.setLatestResult(result)
-			logrus.WithContext(ctx).Infof("test finished: Ping: %s - DL: %s - UL: %s", result.Ping, result.Download.String(), result.Upload.String())
+			logrus.WithContext(ctx).Infof("test finished: Ping: %s - DL: %s - UL: %s", result.Ping, result.DownloadString, result.UploadString)
 			logrus.WithContext(ctx).Debugf("next test scheduled in %s", interval)
 		}
 
@@ -126,7 +126,20 @@ func (c *SpeedtestComponent) Run(ctx context.Context) error {
 }
 
 func (c *SpeedtestComponent) execute(ctx context.Context) (*Result, error) {
-	client := speedtest.New()
+	var location *speedtest.Location
+	if c.cfg.Latitude != nil && c.cfg.Longitude != nil {
+		location = &speedtest.Location{
+			Lat: *c.cfg.Latitude,
+			Lon: *c.cfg.Longitude,
+		}
+		logrus.WithContext(ctx).Debugf("using custom location: %f, %f", *c.cfg.Latitude, *c.cfg.Longitude)
+	}
+
+	client := speedtest.New(
+		speedtest.WithUserConfig(&speedtest.UserConfig{
+			Location: location,
+		}),
+	)
 
 	if _, _, err := c.fetchInterfaceInfo(ctx); err != nil {
 		return nil, err
@@ -151,9 +164,7 @@ func (c *SpeedtestComponent) execute(ctx context.Context) (*Result, error) {
 		return nil, fmt.Errorf("unable to fetch targets: %w", err)
 	}
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("no server available to execute a test")
-	}
+	logrus.WithContext(ctx).Debugf("using server %s (%s) for the test (distance: %fkm)", targets[0].Name, targets[0].ID, targets[0].Distance)
 
 	logrus.WithContext(ctx).Debug("executing the ping test")
 	if err := targets[0].PingTestContext(ctx, nil); err != nil {
@@ -186,10 +197,10 @@ func (c *SpeedtestComponent) execute(ctx context.Context) (*Result, error) {
 			Distance: targets[0].Distance,
 		},
 
-		Download:       download,
+		Download:       download * 8,
 		DownloadString: download.String(),
 
-		Upload:       upload,
+		Upload:       upload * 8,
 		UploadString: upload.String(),
 	}, nil
 }
