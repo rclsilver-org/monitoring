@@ -7,7 +7,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/rclsilver/monitoring/daemon/pkg/pid"
+	"github.com/rclsilver-org/monitoring/daemon/pkg/pid"
 )
 
 var (

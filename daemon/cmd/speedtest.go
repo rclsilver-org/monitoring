@@ -9,10 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/rclsilver/monitoring/daemon/pkg/component"
-	"github.com/rclsilver/monitoring/daemon/pkg/server"
-	"github.com/rclsilver/monitoring/daemon/speedtest"
-	"github.com/rclsilver/monitoring/daemon/version"
+	"github.com/rclsilver-org/monitoring/daemon/pkg/component"
+	"github.com/rclsilver-org/monitoring/daemon/pkg/server"
+	"github.com/rclsilver-org/monitoring/daemon/speedtest"
+	"github.com/rclsilver-org/monitoring/daemon/version"
 )
 
 var speedtestCmd = &cobra.Command{

@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/wI2L/fizz"
 
-	"github.com/rclsilver/monitoring/daemon/pkg/component"
-	"github.com/rclsilver/monitoring/daemon/pkg/server"
+	"github.com/rclsilver-org/monitoring/daemon/pkg/component"
+	"github.com/rclsilver-org/monitoring/daemon/pkg/server"
 )
 
 type Topic struct {
