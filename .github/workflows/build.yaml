@@ -58,7 +58,7 @@ jobs:
         run: |
             mkdir -p daemon/debian/usr/bin
 
-            for arch in amd64 mips64; do
+            for arch in amd64 mips64 arm64; do
                 cp -R daemon/debian .debpkg-${arch}
                 cp daemon/dist/monitoring-daemon-linux-${arch} .debpkg-${arch}/usr/bin/monitoring-daemon
             done
@@ -87,6 +87,18 @@ jobs:
           desc: 'monitoring daemon'
           homepage: 'https://github.com/rclsilver-org/monitoring'
 
+      - name: Build the package
+        id: build_deb_arm64
+        uses: jiro4989/build-deb-action@v3
+        with:
+          package: monitoring-daemon
+          package_root: .debpkg-arm64
+          maintainer: Thomas Bétrancourt <thomas@betrancourt.net>
+          version: ${{ steps.version.outputs.value }}
+          arch: 'arm64'
+          desc: 'monitoring daemon'
+          homepage: 'https://github.com/rclsilver-org/monitoring'
+
       - name: Build and push Docker image
         id: push
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
@@ -107,5 +119,6 @@ jobs:
           files: |
             daemon/dist/monitoring-daemon-linux-amd64
             daemon/dist/monitoring-daemon-linux-mips64
+            daemon/dist/monitoring-daemon-linux-arm64
             ${{ steps.build_deb_amd64.outputs.file_name }}
             ${{ steps.build_deb_mips64.outputs.file_name }}

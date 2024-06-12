@@ -18,17 +18,22 @@ all: monitoring-daemon-$(shell go env GOOS)-$(shell go env GOARCH)
 
 compile: $(BINARY)
 
-$(BINARY): $(BINARY)-linux-amd64 $(BINARY)-linux-mips64
+$(BINARY): $(BINARY)-linux-amd64 $(BINARY)-linux-mips64 $(BINARY)-linux-arm64
 
 $(BINARY)-linux-amd64: $(DIST_DIR)/$(BINARY)-linux-amd64
 
 $(BINARY)-linux-mips64: $(DIST_DIR)/$(BINARY)-linux-mips64
+
+$(BINARY)-linux-arm64: $(DIST_DIR)/$(BINARY)-linux-arm64
 
 $(DIST_DIR)/$(BINARY)-linux-amd64: $(SOURCE_FILES) go.mod
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build $(LD_FLAGS) -o $@ ./main.go
 
 $(DIST_DIR)/$(BINARY)-linux-mips64: $(SOURCE_FILES) go.mod
 	CGO_ENABLED=0 GOOS=linux GOARCH=mips64 go build $(LD_FLAGS) -o $@ ./main.go
+
+$(DIST_DIR)/$(BINARY)-linux-arm64: $(SOURCE_FILES) go.mod
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build $(LD_FLAGS) -o $@ ./main.go
 
 .PHONY: test
 test:
