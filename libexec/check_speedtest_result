@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: $(basename ${0}) -U <url> [-w <warning>] [-c <critical>] [-p <ping-treshold>] [-d <download-treshold>] [-u <upload-treshold>]"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while getopts ":U:w:c:p:d:u:" opt; do
+    case ${opt} in
+        U)
+            url=$OPTARG
+            ;;
+        w)
+            warning=$OPTARG
+            ;;
+        c)
+            critical=$OPTARG
+            ;;
+        d)
+            download_treshold=$OPTARG
+            ;;
+        u)
+            upload_treshold=$OPTARG
+            ;;
+        p)
+            ping_treshold=$OPTARG
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -z "${url}" ]; then
+    echo "missing url"
+    usage
+fi
+
+if [ -z "${warning}" ]; then
+    warning=$((30))
+fi
+
+if [ -z "${critical}" ]; then
+    critical=$((60))
+fi
+
+response=$(curl -sSf ${url}/speedtest/result 2>&1)
+ret=$?
+
+if [ $ret -ne 0 ]; then
+    echo "CRITICAL - cURL error (${response})"
+    exit 2
+fi
+
+timestamp=$(echo "${response}" | jq -r .result.timestamp)
+timestamp_secs=$(echo "${timestamp}" | xargs -I {} date -d "{}" +%s)
+
+timestamp_warning=$((timestamp_secs - $((warning * 60))))
+timestamp_critical=$((timestamp_secs - $((critical * 60))))
+
+if [ $timestamp_secs -lt $timestamp_critical ]; then
+    echo "CRITICAL - Result is too old (${timestamp}) |time=${timestamp_secs}"
+    exit 2
+elif [ $timestamp_secs -lt $timestamp_warning ]; then
+    echo "WARNING - Result is too old (${timestamp}) |time=${timestamp_secs}"
+    exit 1
+else
+    ping_raw=$(echo "${response}" | jq -r .result.ping)
+    ping_ms=$(echo "scale=2; ${ping_raw} / 1000000.0" | bc -l)
+
+    download_raw=$(echo "${response}" | jq -r '.result.download')
+    download_human=$(echo "${response}" | jq -r '.result["download-string"]')
+
+    upload_raw=$(echo "${response}" | jq -r '.result.upload')
+    upload_human=$(echo "${response}" | jq -r '.result["upload-string"]')
+
+    if [ ! -z "${ping_treshold}" ] && [ $(echo "${ping_ms} >= ${ping_treshold}" | bc -l) == "1" ]; then
+        echo "CRITICAL - Latency is too high: ${ping_ms}ms |time=${timestamp_secs} ping=${ping_ms} download=${download_raw} upload=${upload_raw}"
+        exit 2
+    fi
+
+    if [ ! -z "${download_treshold}" ] && [ $(echo "${download_raw} < ${download_treshold}" | bc -l) == "1" ]; then
+        echo "CRITICAL - Download rate is too low: ${download_human} |time=${timestamp_secs} ping=${ping_ms} download=${download_raw} upload=${upload_raw}"
+        exit 2
+    fi
+
+    if [ ! -z "${upload_treshold}" ] && [ $(echo "${upload_raw} < ${upload_treshold}" | bc -l) == "1" ]; then
+        echo "CRITICAL - Upload rate is too low: ${upload_human} |time=${timestamp_secs} ping=${ping_ms} download=${download_raw} upload=${upload_raw}"
+        exit 2
+    fi
+
+    echo "OK - Ping: ${ping_ms}ms - Download: ${download_human} - Upload: ${upload_human} (${timestamp}) |time=${timestamp_secs} ping=${ping_ms} download=${download_raw} upload=${upload_raw}"
+    exit 0
+fi
+
