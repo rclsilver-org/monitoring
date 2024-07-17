@@ -124,6 +124,7 @@ func (s *Server) checkAllowedSources(next http.Handler) http.Handler {
 			}
 
 			if !allowed {
+				logrus.WithContext(r.Context()).Debugf("request rejected from %q", remote_address)
 				http.Error(w, "not allowed", http.StatusForbidden)
 				return
 			}
