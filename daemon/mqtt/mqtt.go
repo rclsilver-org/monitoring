@@ -120,12 +120,6 @@ func (c *MQTTComponent) Run(ctx context.Context) error {
 		return err
 	}
 
-	if token := client.Subscribe("#", 0, c.messagePubHandler); token.Wait() && token.Error() != nil {
-		err := fmt.Errorf("error while subscribing: %w", token.Error())
-		c.disconnect()
-		return err
-	}
-
 	select {
 	case <-ctx.Done():
 		c.disconnect()
@@ -158,8 +152,15 @@ func (c *MQTTComponent) messagePubHandler(client mqtt.Client, msg mqtt.Message) 
 }
 
 func (c *MQTTComponent) connectHandler(client mqtt.Client) {
-	c.setAvailable()
 	logrus.Infof("connected to the MQTT broker: %s:%d", c.cfg.Host, c.cfg.Port)
+
+	if token := client.Subscribe("#", 0, c.messagePubHandler); token.Wait() && token.Error() != nil {
+		c.disconnect()
+		c.setUnavailable(fmt.Errorf("error while subscribing: %w", token.Error()))
+		logrus.WithError(token.Error()).Error("unable to subscribe")
+	} else {
+		c.setAvailable()
+	}
 }
 
 func (c *MQTTComponent) reconnectingHandler(client mqtt.Client, opts *mqtt.ClientOptions) {
