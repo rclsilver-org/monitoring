@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-    echo "Usage: $(basename ${0}) -U <url> -t <topic> -w <warning> -c <critical>[ -N [-m <min-value>] [-M <max-value>]]"
+    echo "Usage: $(basename ${0}) -U <url> -t <topic> -w <warning> -c <critical>[-S [-s <last-seen-delay>]][ -N [-m <min-value>] [-M <max-value>]]"
     exit 1
 }
 
@@ -9,7 +9,7 @@ if [ $# -eq 0 ]; then
     usage
 fi
 
-while getopts ":U:t:w:c:Nm:M:" opt; do
+while getopts ":U:t:w:c:Nm:M:Ss:" opt; do
     case ${opt} in
         U)
             url=$OPTARG
@@ -31,6 +31,12 @@ while getopts ":U:t:w:c:Nm:M:" opt; do
             ;;
         M)
             numeric_max=$OPTARG
+            ;;
+        S)
+            last_seen=1
+            ;;
+        s)
+            last_seen_delay=$OPTARG
             ;;
         *)
             usage
@@ -54,6 +60,10 @@ fi
 
 if [ -z "${critical}" ]; then
     critical=$((15*60))
+fi
+
+if [ -z "${last_seen_delay}" ]; then
+    last_seen_delay=$((60*60))
 fi
 
 response=$(curl -sSf ${url}/mqtt/topics/$(echo "${topic}" | sed 's/\//%2F/g') 2>&1)
@@ -82,9 +92,24 @@ elif [ $timestamp_topic_secs -lt $timestamp_warning ]; then
     echo "WARNING - ${topic} is too old (${timestamp_topic}) |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
     exit 1
 else
-    if [ "${numeric}" == "1" ]; then
-        payload=$(echo "${response}" | jq -r .topic.payload | base64 -d)
+    payload=$(echo "${response}" | jq -r .topic.payload | base64 -d)
 
+    if [ "${last_seen}" == "1" ]; then
+        last_seen=$(echo "${payload}" | jq -r '.last_seen')
+
+        if [ "${last_seen}" == "null" ]; then
+            echo "WARNING - ${topic} has not 'last_seen' field |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
+            exit 1
+        fi
+
+        last_seen_secs=$(echo "${last_seen}" | xargs -I {} date -d "{}" +%s)
+        seen_since_secs=$((timestamp_secs - last_seen_secs))
+
+        if [ $seen_since_secs -gt $last_seen_delay ]; then
+            echo "CRITICAL - ${topic} not seen since ${last_seen} |time=${timestamp_topic_secs} elapsed=${elapsed_secs} seen=${last_seen_secs}"
+            exit 2
+        fi
+    elif [ "${numeric}" == "1" ]; then
         if ! (echo "${payload}" | grep -qE '^[0-9]+(\.[0-9]+)?$'); then
             echo "CRITICAL - value is not a numeric |time=${timestamp_topic_secs} elapsed=${elapsed_secs}"
             exit 2
