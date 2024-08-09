@@ -149,6 +149,8 @@ func (c *MQTTComponent) messagePubHandler(client mqtt.Client, msg mqtt.Message) 
 
 	c.topics[msg.Topic()].Payload = make([]byte, 0, len(msg.Payload()))
 	c.topics[msg.Topic()].Payload = append(c.topics[msg.Topic()].Payload, msg.Payload()...)
+
+	logrus.Debugf("new message in topic %q", msg.Topic())
 }
 
 func (c *MQTTComponent) connectHandler(client mqtt.Client) {
@@ -160,6 +162,7 @@ func (c *MQTTComponent) connectHandler(client mqtt.Client) {
 		logrus.WithError(token.Error()).Error("unable to subscribe")
 	} else {
 		c.setAvailable()
+		logrus.Debug("subscribed to all the topics")
 	}
 }
 
