@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+
+# check radarr, sonarr and prowlarr health
+
+usage() {
+    echo "Usage: $(basename ${0}) -c <check-http> -d <domain> -v <api-version> -k <key-dir>"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while getopts "c:d:v:k:" opt; do
+    case ${opt} in
+        c)
+            check_http=$OPTARG
+            ;;
+        d)
+            domain=$OPTARG
+            ;;
+        v)
+            api_version=$OPTARG
+            ;;
+        k)
+            key_dir=$OPTARG
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -z "${check_http}" ]; then
+    echo "missing check http"
+    usage
+fi
+
+if [ -z "${domain}" ]; then
+    echo "missing domain"
+    usage
+fi
+
+if [ -z "${key_dir}" ]; then
+    echo "missing key directory"
+    usage
+fi
+
+result=$(${check_http} -H ${domain} -S -f follow)
+ret=$?
+if [ $ret -ne 0 ]; then
+    echo "${result}"
+    exit ${ret}
+fi
+
+key_file="${key_dir}/${domain}"
+if [ ! -f "${key_file}" ]; then
+    echo "no key found for the domain '${domain}'"
+    exit 1
+fi
+
+health_url="https://${domain}/api/${api_version}/health"
+key=$(cat "${key_file}")
+response=$(curl -sSf -H "Authorization: Bearer ${key}" ${health_url} 2>&1)
+ret=$?
+
+if [ $ret -ne 0 ]; then
+    echo "CRITICAL - cURL error (${response})"
+    exit 2
+fi
+
+warnings=$(echo "${response}" | jq '[.[] | select(.type == "warning")] | length')
+errors=$(echo "${response}" | jq '[.[] | select(.type != "warning")] | length')
+
+if [ $errors -gt 0 ]; then
+    if [ $warnings -gt 0 ]; then
+        warnings_str=" - ${warnings} warning(s)"
+    fi
+
+    echo "CRITICAL - ${errors} error(s)${warnings_str}"
+    echo "${response}" | jq .
+    exit 2
+fi
+
+if [ $warnings -gt 0 ]; then
+    echo "WARNING - ${warnings} warning(s)"
+    exit 1
+fi
+
+echo "OK - Status is OK"
+exit 0
