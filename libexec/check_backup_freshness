@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: $(basename ${0}) -t <threshold>"
+    exit 1
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+while getopts "t:" opt; do
+    case ${opt} in
+        t)
+            threshold=$OPTARG
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+if [ -z "${threshold}" ]; then
+    echo "missing threshold"
+    usage
+fi
+
+echo "WARNING - no backup since at least ${threshold}"
+exit 1
